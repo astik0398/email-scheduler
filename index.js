@@ -45,7 +45,7 @@ const sendEmail = (email, taskName, dueDate) => {
 };
 
 // Cron job to check for due tasks every minute
-cron.schedule('*/15 * * * *', () => {
+cron.schedule('*/5 * * * *', () => {
   console.log('Running cron job to check for due tasks...');
   const now = new Date();
 console.log('current time', now);
