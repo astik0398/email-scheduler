@@ -28,11 +28,18 @@ const tasks = [
 // Function to send email
 const sendEmail = (email, taskName, dueDate) => {
   console.log(`Preparing to send email to: ${email}`);
+
+  const dateOnly = new Date(dueDate).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
   const mailOptions = {
     from: 'amazingrandomfaqs@gmail.com',
     to: email,
-    subject: `Reminder: Task "${taskName}" Due`,
-    text: `Hi, just a reminder that the task "${taskName}" is due on ${dueDate}.`,
+    subject: `Reminder: Task "${taskName}" is Due`,
+    text: `Hi, just a reminder that the task "${taskName}" is due on ${dateOnly}.`,
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
@@ -45,7 +52,7 @@ const sendEmail = (email, taskName, dueDate) => {
 };
 
 // Cron job to check for due tasks every minute
-cron.schedule('*/5 * * * *', () => {
+cron.schedule('*/2 * * * *', () => {
   console.log('Running cron job to check for due tasks...');
   const now = new Date();
 console.log('current time', now);
@@ -54,6 +61,11 @@ console.log('current time', now);
     const dueDate = new Date(task.dueDate);
     console.log(`Now: ${now}, Task "${task.taskName}" Due Date: ${dueDate}`);
 
+    if (!task.reminder) {
+      console.log(`Reminder is disabled for task "${task.taskName}". Skipping...`);
+      return;
+    }
+    
     // Check if the task is due now or in the last minute
     if (dueDate > new Date(now - 60000)) {
       console.log(`Sending email for task "${task.taskName}"...`);
@@ -64,30 +76,46 @@ console.log('current time', now);
 
 // Endpoint to manually send a reminder
 app.post('/send-reminder', (req, res) => {
-  const { email, taskName, dueDate } = req.body;
+  const { email, taskName, dueDate, reminder } = req.body;
 
-  tasks.push({ email, taskName, dueDate });
+  const taskIndex = tasks.findIndex((task) => task.taskName === taskName);
+  if (taskIndex > -1) {
+    tasks[taskIndex] = { email, taskName, dueDate, reminder };
+  } else {
+    tasks.push({ email, taskName, dueDate, reminder });
+  }
   
-  if (!email || !taskName || !dueDate) {
+  if (!email || !taskName || !dueDate ) {
     return res.status(400).send('Missing required fields: email, taskName, dueDate');
   }
 
-  const mailOptions = {
-    from: 'amazingrandomfaqs@gmail.com',
-    to: email,
-    subject: `Reminder: Task "${taskName}" Due`,
-    text: `Hi, just a reminder that the task "${taskName}" is due on ${dueDate}.`,
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error('Error sending email:', error);
-      return res.status(500).send('Error sending email');
-    }
-
-    console.log(`Reminder sent to ${email}:`, info.response);
-    res.status(200).send('Reminder sent');
+  const dateOnly = new Date(dueDate).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
+
+  if (reminder) {
+    const mailOptions = {
+      from: 'amazingrandomfaqs@gmail.com',
+      to: email,
+      subject: `Reminder: Task "${taskName}" Due`,
+      text: `Hi, just a reminder that the task "${taskName}" is due on ${dateOnly}.`,
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+      if (error) {
+        console.error('Error sending email:', error);
+        return res.status(500).send('Error sending email');
+      }
+
+      console.log(`Reminder sent to ${email}:`, info.response);
+      return res.status(200).send('Reminder sent');
+    });
+  } else {
+    console.log(`Reminder disabled for task "${taskName}".`);
+    return res.status(200).send('Reminder updated but not sent (disabled).');
+  }
 });
 
 // Endpoint to add a new task
