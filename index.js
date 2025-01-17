@@ -77,7 +77,7 @@ const sendDetailedEmail = (email, taskName, description, dueDate) => {
 };
 
 // Cron job to check for due project tasks every 2 minutes
-cron.schedule('*/2 * * * *', () => {
+cron.schedule('0 0 */3 * *', () => {
   console.log('Running cron job to check for due project tasks...');
   const now = new Date();
 
@@ -98,7 +98,7 @@ cron.schedule('*/2 * * * *', () => {
 });
 
 // Cron job to check for due detailed tasks every 2 minutes
-cron.schedule('*/2 * * * *', () => {
+cron.schedule('0 0 */3 * *', () => {
   console.log('Running cron job for detailed tasks...');
   const now = new Date();
 
